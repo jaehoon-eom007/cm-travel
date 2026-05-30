@@ -227,165 +227,167 @@ function TripCard({ trip, onOpen, onDel }) {
   );
 }
 
-// ─── TripDetail ───────────────────────────────────────────────────────
-function TripDetail({ tripId, trips, setTrips, onBack }) {
-  // trips 배열에서 직접 읽고 직접 씀 → stale closure 없음
-  const trip = trips.find(t => t.id === tripId);
-  const col  = COLORS[trip.colorIdx||0];
-
-  const [activeDayIdx, setActiveDayIdx] = useState(0);
-  const [activeTab,    setActiveTab]    = useState("schedule");
-  const [editTitle,    setEditTitle]    = useState(false);
-  const [showExport,   setShowExport]   = useState(false);
-  const [showColor,    setShowColor]    = useState(false);
-
-  const cur = trip.days[activeDayIdx] || trip.days[0];
-
-  // trips 배열을 직접 갱신하는 단일 함수
-  const updateTrip = (newTrip) => setTrips(prev => prev.map(t => t.id === tripId ? newTrip : t));
-
-  // days 변경 헬퍼
-  const setDays = (newDays) => updateTrip({ ...trip, days: newDays });
-
-  // 날짜 변경 → 즉시 전체 recalc
-  const setDayField = (idx, patch) => {
-    const updated = trip.days.map((d, i) => i === idx ? { ...d, ...patch } : d);
-    const final   = "date" in patch ? recalcDates(updated) : updated;
-    setDays(final);
+// ─── TripDetail ───────────────────────────────────────────────────────────────
+function DaySection({ day, idx, total, ac, trip, setTrips, tripId, onAddDay, onRemoveDay }) {
+  const [activeTab, setActiveTab] = useState("schedule");
+  const setDayField = (patch) => {
+    setTrips(prev => prev.map(t => {
+      if (t.id !== tripId) return t;
+      const updated = t.days.map((d, i) => i === idx ? { ...d, ...patch } : d);
+      const final   = "date" in patch ? recalcDates(updated) : updated;
+      return { ...t, days: final };
+    }));
   };
 
-  // + 버튼: trip.days 에서 직접 읽음
+  return (
+    <div style={{ marginBottom: 24 }}>
+      {/* Day 헤더 */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        {/* 날짜 배지 */}
+        <div style={{ flexShrink: 0, textAlign: "center", background: ac, borderRadius: 12, padding: "6px 12px", minWidth: 56 }}>
+          <div style={{ color: "#fff", fontSize: 11, fontWeight: 600, opacity: 0.85 }}>Day</div>
+          <div style={{ color: "#fff", fontSize: 18, fontWeight: 700, lineHeight: 1 }}>{idx + 1}</div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <input type="date" value={day.date}
+            onChange={e => setDayField({ date: e.target.value })}
+            style={{ border: "none", outline: "none", fontSize: 13, color: ac, fontWeight: 600, background: "transparent", display: "block" }} />
+          {idx === 0 && day.date && <span style={{ fontSize: 10, color: "#bbb" }}>← Day 1 날짜 설정 시 이후 날짜 자동 업데이트</span>}
+          <input value={day.title} onChange={e => setDayField({ title: e.target.value })}
+            placeholder="이 날의 테마를 입력하세요"
+            style={{ border: "none", outline: "none", fontSize: 15, fontWeight: 600, color: "#2d3748", width: "100%", background: "transparent", marginTop: 2 }} />
+        </div>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          {total > 1 && <button onClick={() => onRemoveDay(idx)} style={ghost({ fontSize: 16 })}>🗑</button>}
+        </div>
+      </div>
+
+      {/* 서브탭 */}
+      <div style={{ display: "flex", background: "#f7f8fc", borderRadius: 12, padding: 4, marginBottom: 12 }}>
+        {[["schedule","📅 일정"],["photos","🖼 사진"],["memo","📝 메모"]].map(([k, l]) => (
+          <button key={k} onClick={() => setActiveTab(k)}
+            style={{ flex: 1, padding: "8px 0", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer",
+              background: activeTab === k ? "#fff" : "transparent",
+              color: activeTab === k ? ac : "#aaa",
+              boxShadow: activeTab === k ? "0 1px 6px rgba(0,0,0,0.08)" : "none",
+              transition: "all 0.15s" }}>{l}</button>
+        ))}
+      </div>
+
+      {/* 탭 내용 */}
+      <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+        {activeTab === "schedule" && <Schedule items={day.schedule} ac={ac} onChange={v => setDayField({ schedule: v })} />}
+        {activeTab === "photos"   && <PhotoGrid photos={day.photos || []} onAdd={p => setDayField({ photos: [...(day.photos || []), p] })} onDel={id => setDayField({ photos: (day.photos || []).filter(p => p.id !== id) })} />}
+        {activeTab === "memo"     && (
+          <div style={{ padding: "0 16px 16px" }}>
+            <textarea value={day.memo} onChange={e => setDayField({ memo: e.target.value })} placeholder="메모를 자유롭게 입력하세요..."
+              style={{ width: "100%", minHeight: 120, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: 12, fontSize: 14, lineHeight: 1.8, resize: "vertical", outline: "none", boxSizing: "border-box", fontFamily: "inherit", color: "#2d3748", background: "#fafafa" }} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TripDetail({ tripId, trips, setTrips, onBack }) {
+  const trip = trips.find(t => t.id === tripId);
+  const col  = COLORS[trip.colorIdx || 0];
+  const [editTitle,  setEditTitle]  = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [showColor,  setShowColor]  = useState(false);
+
+  const updateTrip = (patch) => setTrips(prev => prev.map(t => t.id === tripId ? { ...t, ...patch } : t));
+
   const addDayBtn = () => {
-    const base    = trip.days[0]?.date;
-    const newIdx  = trip.days.length;
-    const newDate = base ? dateAdd(base, newIdx) : "";
-    const nd      = [...trip.days, makeDay(newIdx, newDate)];
-    setDays(nd);
-    setActiveDayIdx(nd.length - 1);
+    setTrips(prev => prev.map(t => {
+      if (t.id !== tripId) return t;
+      const base    = t.days[0]?.date;
+      const newIdx  = t.days.length;
+      const newDate = base ? dateAdd(base, newIdx) : "";
+      return { ...t, days: [...t.days, makeDay(newIdx, newDate)] };
+    }));
   };
 
   const removeDayBtn = (idx) => {
-    if (trip.days.length === 1) return;
-    const nd = recalcDates(trip.days.filter((_, i) => i !== idx));
-    setDays(nd);
-    setActiveDayIdx(prev => Math.min(prev, nd.length - 1));
+    setTrips(prev => prev.map(t => {
+      if (t.id !== tripId) return t;
+      if (t.days.length === 1) return t;
+      const nd = recalcDates(t.days.filter((_, i) => i !== idx));
+      return { ...t, days: nd };
+    }));
   };
 
   const copyShareLink = () => {
-    const data = btoa(encodeURIComponent(JSON.stringify({ trip: { ...trip, days: trip.days.map(d=>({...d,photos:[]})) } })));
+    const data = btoa(encodeURIComponent(JSON.stringify({ trip: { ...trip, days: trip.days.map(d => ({ ...d, photos: [] })) } })));
     navigator.clipboard.writeText(location.href.split("?")[0] + "?share=" + data).then(() => alert("링크 복사 완료! (사진 제외)"));
   };
 
   return (
-    <div style={{minHeight:"100vh",background:"#f7f8fc",fontFamily:"inherit"}}>
-      {/* Header */}
-      <div style={{background:col.bg,padding:"16px 20px 0"}}>
-        <div style={{maxWidth:1100,margin:"0 auto"}}>
-          {/* Top row */}
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+    <div style={{ minHeight: "100vh", background: "#f7f8fc", fontFamily: "inherit" }}>
+      {/* 상단 헤더 */}
+      <div style={{ background: col.bg, padding: "16px 20px 20px", position: "sticky", top: 0, zIndex: 50 }}>
+        <div style={{ maxWidth: 760, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button onClick={onBack} style={hdr()}>←</button>
-            <div style={{flex:1}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <button onClick={()=>{ const e=EMOJIS; updateTrip({...trip,emoji:e[(e.indexOf(trip.emoji)+1)%e.length]}); }}
-                  style={{background:"none",border:"none",fontSize:22,cursor:"pointer"}}>{trip.emoji}</button>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button onClick={() => { const e = EMOJIS; updateTrip({ emoji: e[(e.indexOf(trip.emoji) + 1) % e.length] }); }}
+                  style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer" }}>{trip.emoji}</button>
                 {editTitle
-                  ? <input autoFocus value={trip.title}
-                      onChange={e=>updateTrip({...trip,title:e.target.value})}
-                      onBlur={()=>setEditTitle(false)}
-                      onKeyDown={e=>e.key==="Enter"&&setEditTitle(false)}
-                      style={{background:"rgba(255,255,255,0.2)",border:"none",borderBottom:"2px solid #fff",color:"#fff",fontSize:18,fontWeight:700,outline:"none",borderRadius:0,padding:"2px 4px",flex:1}} />
-                  : <h1 onClick={()=>setEditTitle(true)} style={{margin:0,color:"#fff",fontSize:18,fontWeight:700,cursor:"pointer"}}>
-                      {trip.title} <span style={{fontSize:13,opacity:0.7}}>✏️</span>
+                  ? <input autoFocus value={trip.title} onChange={e => updateTrip({ title: e.target.value })}
+                      onBlur={() => setEditTitle(false)} onKeyDown={e => e.key === "Enter" && setEditTitle(false)}
+                      style={{ background: "rgba(255,255,255,0.2)", border: "none", borderBottom: "2px solid #fff", color: "#fff", fontSize: 18, fontWeight: 700, outline: "none", borderRadius: 0, padding: "2px 4px", flex: 1 }} />
+                  : <h1 onClick={() => setEditTitle(true)} style={{ margin: 0, color: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer" }}>
+                      {trip.title} <span style={{ fontSize: 13, opacity: 0.7 }}>✏️</span>
                     </h1>
                 }
               </div>
-              <p style={{margin:"3px 0 0",color:"rgba(255,255,255,0.75)",fontSize:12}}>
-                {trip.days.length}일 여행{trip.days[0].date?" · "+fmtShort(trip.days[0].date)+" 출발":""}
+              <p style={{ margin: "2px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 12 }}>
+                {trip.days.length}일 여행{trip.days[0].date ? " · " + fmtShort(trip.days[0].date) + " 출발" : ""}
               </p>
             </div>
-            <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>setShowColor(!showColor)} style={hdr()}>🎨</button>
-              <button onClick={()=>setShowExport(!showExport)} style={hdr()}>↗</button>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setShowColor(!showColor)} style={hdr()}>🎨</button>
+              <button onClick={() => setShowExport(!showExport)} style={hdr()}>↗</button>
             </div>
           </div>
 
-          {/* Color picker */}
-          {showColor&&(
-            <div style={{background:"rgba(0,0,0,0.2)",borderRadius:14,padding:12,marginBottom:12,display:"flex",gap:10,flexWrap:"wrap"}}>
-              {COLORS.map((c,i)=>(
-                <button key={i} onClick={()=>{updateTrip({...trip,colorIdx:i});setShowColor(false);}}
-                  style={{width:36,height:36,borderRadius:"50%",border:(trip.colorIdx===i)?"3px solid #fff":"3px solid transparent",background:c.bg,cursor:"pointer"}} />
+          {showColor && (
+            <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 14, padding: 12, marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {COLORS.map((c, i) => (
+                <button key={i} onClick={() => { updateTrip({ colorIdx: i }); setShowColor(false); }}
+                  style={{ width: 36, height: 36, borderRadius: "50%", border: trip.colorIdx === i ? "3px solid #fff" : "3px solid transparent", background: c.bg, cursor: "pointer" }} />
               ))}
             </div>
           )}
 
-          {/* Export */}
-          {showExport&&(
-            <div style={{background:"rgba(0,0,0,0.2)",borderRadius:14,padding:14,marginBottom:12}}>
-              <p style={{margin:"0 0 10px",color:"#fff",fontSize:13,fontWeight:600}}>📤 내보내기 / 공유</p>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {showExport && (
+            <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 14, padding: 14, marginTop: 12 }}>
+              <p style={{ margin: "0 0 10px", color: "#fff", fontSize: 13, fontWeight: 600 }}>📤 내보내기 / 공유</p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button onClick={copyShareLink} style={btn("rgba(255,255,255,0.25)")}>🔗 공유 링크</button>
-                <button onClick={()=>exportHTML(trip)} style={btn("rgba(255,255,255,0.25)")}>📄 HTML 저장</button>
-                <button onClick={()=>{const a=Object.assign(document.createElement("a"),{href:URL.createObjectURL(new Blob([JSON.stringify(trip,null,2)],{type:"application/json"})),download:trip.title+".json"});a.click();}} style={btn("rgba(255,255,255,0.25)")}>💾 JSON</button>
+                <button onClick={() => exportHTML(trip)} style={btn("rgba(255,255,255,0.25)")}>📄 HTML 저장</button>
+                <button onClick={() => { const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([JSON.stringify(trip, null, 2)], { type: "application/json" })), download: trip.title + ".json" }); a.click(); }} style={btn("rgba(255,255,255,0.25)")}>💾 JSON</button>
               </div>
             </div>
           )}
-
-          {/* Day tabs */}
-          <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:14,scrollbarWidth:"none"}}>
-            {trip.days.map((d,i)=>(
-              <button key={d.id} onClick={()=>setActiveDayIdx(i)}
-                style={{flexShrink:0,padding:"7px 14px",borderRadius:20,border:"2px solid "+(activeDayIdx===i?"#fff":"rgba(255,255,255,0.35)"),background:activeDayIdx===i?"rgba(255,255,255,0.25)":"transparent",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                Day {i+1}
-                {d.date&&<span style={{display:"block",fontSize:10,opacity:0.85}}>{fmtTab(d.date)}</span>}
-              </button>
-            ))}
-            <button onClick={addDayBtn}
-              style={{flexShrink:0,padding:"7px 14px",borderRadius:20,border:"2px dashed rgba(255,255,255,0.4)",background:"transparent",color:"#fff",fontSize:18,cursor:"pointer"}}>+</button>
-          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{maxWidth:1100,margin:"0 auto",padding:"20px 16px"}}>
-        <div style={{background:"#fff",borderRadius:20,overflow:"hidden"}}>
-          {/* Day header */}
-          <div style={{padding:"16px 20px 0",borderBottom:"1px solid #f0f0f0"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:cur.color,flexShrink:0}} />
-              <div style={{flex:1}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                  <input type="date" value={cur.date}
-                    onChange={e => setDayField(activeDayIdx, { date: e.target.value })}
-                    style={{border:"1.5px solid #e2e8f0",borderRadius:8,outline:"none",fontSize:13,color:col.ac,fontWeight:600,background:"#f8f9ff",padding:"4px 8px"}} />
-                  {activeDayIdx===0&&cur.date&&<span style={{fontSize:11,color:"#bbb"}}>← 설정 시 이후 날짜 자동 업데이트</span>}
-                </div>
-                <input value={cur.title} onChange={e=>setDayField(activeDayIdx,{title:e.target.value})}
-                  placeholder="이 날의 테마 (예: 도쿄 탐방 🗼)"
-                  style={{border:"none",outline:"none",fontSize:16,fontWeight:600,color:"#2d3748",width:"100%",background:"transparent",marginTop:6}} />
-              </div>
-              {trip.days.length>1&&<button onClick={()=>removeDayBtn(activeDayIdx)} style={ghost({fontSize:18})}>🗑</button>}
-            </div>
-            <div style={{display:"flex"}}>
-              {[["schedule","📅 일정"],["photos","🖼 사진"],["memo","📝 메모"]].map(([k,l])=>(
-                <button key={k} onClick={()=>setActiveTab(k)}
-                  style={{flex:1,padding:"10px 0",border:"none",background:"none",fontSize:13,fontWeight:600,cursor:"pointer",color:activeTab===k?col.ac:"#bbb",borderBottom:"2px solid "+(activeTab===k?col.ac:"transparent"),transition:"all 0.2s"}}>{l}</button>
-              ))}
-            </div>
-          </div>
+      {/* 날짜별 세션 스크롤 */}
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 16px 100px" }}>
+        {trip.days.map((day, i) => (
+          <DaySection key={day.id} day={day} idx={i} total={trip.days.length}
+            ac={col.ac} trip={trip} setTrips={setTrips} tripId={tripId}
+            onAddDay={addDayBtn} onRemoveDay={removeDayBtn} />
+        ))}
 
-          {/* Tab content */}
-          <div style={{paddingTop:16}}>
-            {activeTab==="schedule"&&<Schedule items={cur.schedule} ac={col.ac} onChange={v=>setDayField(activeDayIdx,{schedule:v})} />}
-            {activeTab==="photos"&&<PhotoGrid photos={cur.photos||[]} onAdd={p=>setDayField(activeDayIdx,{photos:[...(cur.photos||[]),p]})} onDel={id=>setDayField(activeDayIdx,{photos:(cur.photos||[]).filter(p=>p.id!==id)})} />}
-            {activeTab==="memo"&&(
-              <div style={{padding:"0 16px 16px"}}>
-                <textarea value={cur.memo} onChange={e=>setDayField(activeDayIdx,{memo:e.target.value})} placeholder="메모를 자유롭게 입력하세요..."
-                  style={{width:"100%",minHeight:160,border:"1.5px solid #e2e8f0",borderRadius:10,padding:12,fontSize:14,lineHeight:1.8,resize:"vertical",outline:"none",boxSizing:"border-box",fontFamily:"inherit",color:"#2d3748",background:"#fafafa"}} />
-              </div>
-            )}
-          </div>
-        </div>
+        {/* + Day 추가 버튼 */}
+        <button onClick={addDayBtn}
+          style={{ width: "100%", padding: "14px", border: "2px dashed #d0d7de", borderRadius: 16, background: "transparent", color: "#aaa", fontSize: 15, cursor: "pointer", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          + Day {trip.days.length + 1} 추가
+          {trip.days[0].date && <span style={{ fontSize: 13, color: "#bbb" }}>({fmtShort(dateAdd(trip.days[0].date, trip.days.length))})</span>}
+        </button>
       </div>
     </div>
   );

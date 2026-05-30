@@ -63,10 +63,19 @@ async function sheetSave(url, data) {
 }
 async function sheetLoad(url) {
   try {
-    const r = await fetch(url + "?action=load");
-    const j = await r.json();
+    const r = await fetch(url + "?action=load", {
+      redirect: "follow",
+      mode: "cors",
+    });
+    const text = await r.text();
+    // Apps Script가 HTML 에러 페이지를 반환하는 경우 처리
+    if (text.startsWith("<!")) return null;
+    const j = JSON.parse(text);
     return j.data ? JSON.parse(j.data) : null;
-  } catch { return null; }
+  } catch (e) {
+    console.error("sheetLoad error:", e);
+    return null;
+  }
 }
 
 // ─── Export ───────────────────────────────────────────────────────────
@@ -406,10 +415,19 @@ function Home({ trips, setTrips, onOpen, sheetUrl, setSheetUrl }) {
     msg("저장 중..."); const ok = await sheetSave(sheetUrl,{trips}); msg(ok?"✅ 저장 완료!":"❌ 저장 실패");
   };
   const handleLoad = async () => {
-    if (!sheetUrl) return;
+    if (!sheetUrl) { alert("URL을 먼저 입력해주세요."); return; }
     msg("불러오는 중...");
-    const d = await sheetLoad(sheetUrl);
-    if (d?.trips) { setTrips(d.trips); msg("✅ 불러오기 완료!"); } else msg("❌ 데이터 없음");
+    try {
+      const d = await sheetLoad(sheetUrl);
+      if (d?.trips) {
+        setTrips(d.trips);
+        msg("✅ " + d.trips.length + "개 여행 불러오기 완료!");
+      } else {
+        msg("❌ 데이터 없음 — Sheets A1 셀에 데이터가 있는지 확인하세요");
+      }
+    } catch (e) {
+      msg("❌ 오류: " + e.message);
+    }
   };
   const importJSON = e => {
     const f = e.target.files[0]; if (!f) return;

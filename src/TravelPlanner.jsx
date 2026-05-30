@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-// ─── Constants ────────────────────────────────────────────────────────
 const STORAGE_KEY = "travel_planner_v2";
 const SHEET_URL_KEY = "travel_planner_sheet_url";
 
@@ -22,7 +21,6 @@ const DAY_COLORS = [
 
 const TRIP_EMOJIS = ["✈️","🗺️","🏖️","🏔️","🌸","🗼","🗽","🎌","🏝️","🌏","🎡","🏯"];
 
-// ─── Helpers ──────────────────────────────────────────────────────────
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -64,7 +62,6 @@ function newDay(idx) {
   };
 }
 
-// ─── Google Sheets ────────────────────────────────────────────────────
 async function syncToSheet(url, data) {
   if (!url) return { ok: false, error: "URL 없음" };
   try {
@@ -85,7 +82,6 @@ async function loadFromSheet(url) {
   } catch { return null; }
 }
 
-// ─── Export ───────────────────────────────────────────────────────────
 function exportTripHTML(trip) {
   const color = TRIP_COLORS[trip.colorIdx || 0].accent;
   const days = trip.days.map((day, i) => {
@@ -93,26 +89,9 @@ function exportTripHTML(trip) {
       `<li>${s.time ? `<b>${s.time}</b> ` : ""}${s.text}${s.done ? " ✓" : ""}</li>`
     ).join("");
     const memo = day.memo ? `<p class="memo">${day.memo.replace(/\n/g,"<br>")}</p>` : "";
-    return `<div class="day">
-  <h2>Day ${i+1}${day.date ? ` · ${formatDate(day.date)}` : ""}${day.title ? ` — ${day.title}` : ""}</h2>
-  ${items ? `<ul>${items}</ul>` : ""}${memo}
-</div>`;
+    return `<div class="day"><h2>Day ${i+1}${day.date ? ` · ${formatDate(day.date)}` : ""}${day.title ? ` — ${day.title}` : ""}</h2>${items ? `<ul>${items}</ul>` : ""}${memo}</div>`;
   }).join("\n");
-  const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${trip.emoji} ${trip.title}</title>
-<style>
-body{font-family:'Apple SD Gothic Neo',sans-serif;max-width:680px;margin:0 auto;padding:20px 16px;color:#2d3748;background:#f9fafb}
-h1{color:${color};font-size:26px}
-.day{background:#fff;border-radius:14px;padding:20px;margin:16px 0;border-left:4px solid ${color}}
-h2{color:#2d3748;font-size:17px;margin:0 0 12px}
-ul{margin:0;padding-left:20px;line-height:2.2;color:#4a5568}
-.memo{color:#666;font-size:14px;line-height:1.8;margin:12px 0 0;border-top:1px solid #f0f0f0;padding-top:12px}
-</style></head><body>
-<h1>${trip.emoji} ${trip.title}</h1>
-<p style="color:#999;font-size:13px">${trip.days.length}일 여행</p>
-${days}
-</body></html>`;
+  const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${trip.emoji} ${trip.title}</title><style>body{font-family:'Apple SD Gothic Neo',sans-serif;max-width:680px;margin:0 auto;padding:20px 16px;color:#2d3748;background:#f9fafb}h1{color:${color};font-size:26px}.day{background:#fff;border-radius:14px;padding:20px;margin:16px 0;border-left:4px solid ${color}}h2{color:#2d3748;font-size:17px;margin:0 0 12px}ul{margin:0;padding-left:20px;line-height:2.2;color:#4a5568}.memo{color:#666;font-size:14px;line-height:1.8;margin:12px 0 0;border-top:1px solid #f0f0f0;padding-top:12px}</style></head><body><h1>${trip.emoji} ${trip.title}</h1><p style="color:#999;font-size:13px">${trip.days.length}일 여행</p>${days}</body></html>`;
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -127,7 +106,6 @@ function exportAllJSON(trips) {
   URL.revokeObjectURL(url);
 }
 
-// ─── Inline style helpers ─────────────────────────────────────────────
 const S = {
   btn: (bg, extra = {}) => ({
     padding: "9px 16px", background: bg, border: "none", borderRadius: 10,
@@ -153,7 +131,6 @@ const S = {
   }),
 };
 
-// ─── PhotoGrid ────────────────────────────────────────────────────────
 function PhotoGrid({ photos, onAdd, onDelete }) {
   const fileRef = useRef();
   const handleFiles = (files) => {
@@ -189,7 +166,7 @@ function PhotoGrid({ photos, onAdd, onDelete }) {
       </div>
       {photos.length === 0
         ? <div style={{ textAlign: "center", color: "#ccc", padding: "32px 0", fontSize: 13 }}>사진을 추가해보세요 📷</div>
-        : <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
+        : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 6 }}>
             {photos.map(p => (
               <div key={p.id} style={{ position: "relative", aspectRatio: "1", borderRadius: 10, overflow: "hidden" }}>
                 <img src={p.src} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -206,7 +183,6 @@ function PhotoGrid({ photos, onAdd, onDelete }) {
   );
 }
 
-// ─── Memo ─────────────────────────────────────────────────────────────
 function Memo({ value, onChange }) {
   return (
     <div style={{ padding: "0 16px 16px" }}>
@@ -222,7 +198,6 @@ function Memo({ value, onChange }) {
   );
 }
 
-// ─── Schedule ─────────────────────────────────────────────────────────
 function Schedule({ items, onChange, accent }) {
   const [text, setText] = useState("");
   const [time, setTime] = useState("");
@@ -274,7 +249,6 @@ function Schedule({ items, onChange, accent }) {
   );
 }
 
-// ─── TripCard (Home) ──────────────────────────────────────────────────
 function TripCard({ trip, onOpen, onDelete }) {
   const col = TRIP_COLORS[trip.colorIdx || 0];
   const firstDate = trip.days.find(d => d.date)?.date;
@@ -287,8 +261,7 @@ function TripCard({ trip, onOpen, onDelete }) {
       borderRadius: 18, overflow: "hidden", marginBottom: 14,
       boxShadow: "0 4px 20px rgba(0,0,0,0.10)", cursor: "pointer",
     }} onClick={() => onOpen(trip.id)}>
-      {/* Gradient header */}
-      <div style={{ background: col.bg, padding: "20px 18px 16px", position: "relative" }}>
+      <div style={{ background: col.bg, padding: "20px 18px 16px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <div style={{ fontSize: 32, marginBottom: 4 }}>{trip.emoji}</div>
@@ -305,7 +278,6 @@ function TripCard({ trip, onOpen, onDelete }) {
           </button>
         </div>
       </div>
-      {/* Stats footer */}
       <div style={{ background: "#fff", padding: "12px 18px", display: "flex", gap: 16 }}>
         <span style={{ fontSize: 13, color: "#667eea", fontWeight: 600 }}>📅 {trip.days.length}일</span>
         <span style={{ fontSize: 13, color: "#999" }}>🗓 {totalSchedule}개 일정</span>
@@ -315,7 +287,6 @@ function TripCard({ trip, onOpen, onDelete }) {
   );
 }
 
-// ─── TripDetail ───────────────────────────────────────────────────────
 function TripDetail({ trip, onUpdate, onBack }) {
   const [activeDay, setActiveDay] = useState(0);
   const [activeTab, setActiveTab] = useState("schedule");
@@ -325,7 +296,6 @@ function TripDetail({ trip, onUpdate, onBack }) {
 
   const col = TRIP_COLORS[trip.colorIdx || 0];
   const cur = trip.days[activeDay] || trip.days[0];
-
   const updateTrip = (patch) => onUpdate({ ...trip, ...patch });
 
   const updateDay = useCallback((idx, patch) => {
@@ -362,171 +332,180 @@ function TripDetail({ trip, onUpdate, onBack }) {
     navigator.clipboard.writeText(url).then(() => alert("링크 복사 완료! (사진 제외)"));
   };
 
+  // PC: 2-column layout (sidebar + content)
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", fontFamily: "inherit", background: "#f7f8fc" }}>
+    <div style={{ minHeight: "100vh", fontFamily: "inherit", background: "#f7f8fc" }}>
       {/* Header */}
-      <div style={{ background: col.bg, padding: "16px 16px 0", position: "relative" }}>
-        {/* Top bar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <button onClick={onBack} style={S.hdr()}>←</button>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button onClick={() => {
-                const emojis = TRIP_EMOJIS;
-                const cur = emojis.indexOf(trip.emoji);
-                updateTrip({ emoji: emojis[(cur + 1) % emojis.length] });
-              }} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer" }}>
-                {trip.emoji}
-              </button>
-              {editingTitle
-                ? <input autoFocus value={trip.title}
-                    onChange={e => updateTrip({ title: e.target.value })}
-                    onBlur={() => setEditingTitle(false)}
-                    onKeyDown={e => e.key === "Enter" && setEditingTitle(false)}
-                    style={{
-                      background: "rgba(255,255,255,0.2)", border: "none",
-                      borderBottom: "2px solid #fff", color: "#fff", fontSize: 18,
-                      fontWeight: 700, outline: "none", borderRadius: 0, padding: "2px 4px", flex: 1,
-                    }} />
-                : <h1 onClick={() => setEditingTitle(true)}
-                    style={{ margin: 0, color: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer" }}>
-                    {trip.title} <span style={{ fontSize: 13, opacity: 0.7 }}>✏️</span>
-                  </h1>
-              }
+      <div style={{ background: col.bg, padding: "16px 24px 0" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <button onClick={onBack} style={S.hdr()}>←</button>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button onClick={() => {
+                  const emojis = TRIP_EMOJIS;
+                  const c = emojis.indexOf(trip.emoji);
+                  updateTrip({ emoji: emojis[(c + 1) % emojis.length] });
+                }} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer" }}>
+                  {trip.emoji}
+                </button>
+                {editingTitle
+                  ? <input autoFocus value={trip.title}
+                      onChange={e => updateTrip({ title: e.target.value })}
+                      onBlur={() => setEditingTitle(false)}
+                      onKeyDown={e => e.key === "Enter" && setEditingTitle(false)}
+                      style={{
+                        background: "rgba(255,255,255,0.2)", border: "none",
+                        borderBottom: "2px solid #fff", color: "#fff", fontSize: 18,
+                        fontWeight: 700, outline: "none", borderRadius: 0, padding: "2px 4px", flex: 1,
+                      }} />
+                  : <h1 onClick={() => setEditingTitle(true)}
+                      style={{ margin: 0, color: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer" }}>
+                      {trip.title} <span style={{ fontSize: 13, opacity: 0.7 }}>✏️</span>
+                    </h1>
+                }
+              </div>
+              <p style={{ margin: "3px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 12 }}>
+                {trip.days.length}일 여행
+                {trip.days[0].date ? " · " + formatDateShort(trip.days[0].date) + " 출발" : ""}
+              </p>
             </div>
-            <p style={{ margin: "3px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 12 }}>
-              {trip.days.length}일 여행
-              {trip.days[0].date ? " · " + formatDateShort(trip.days[0].date) + " 출발" : ""}
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => setShowColorPicker(!showColorPicker)} style={S.hdr()}>🎨</button>
-            <button onClick={() => setShowExport(!showExport)} style={S.hdr()}>↗</button>
-          </div>
-        </div>
-
-        {/* Color picker */}
-        {showColorPicker && (
-          <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 14, padding: 12, marginBottom: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {TRIP_COLORS.map((c, i) => (
-              <button key={i} onClick={() => { updateTrip({ colorIdx: i }); setShowColorPicker(false); }}
-                style={{
-                  width: 36, height: 36, borderRadius: "50%", border: trip.colorIdx === i ? "3px solid #fff" : "3px solid transparent",
-                  background: c.bg, cursor: "pointer",
-                }} />
-            ))}
-          </div>
-        )}
-
-        {/* Export panel */}
-        {showExport && (
-          <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 14, padding: 14, marginBottom: 12 }}>
-            <p style={{ margin: "0 0 10px", color: "#fff", fontSize: 13, fontWeight: 600 }}>📤 내보내기 / 공유</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <button onClick={copyShareLink} style={S.btn("rgba(255,255,255,0.25)")}>🔗 공유 링크 복사</button>
-              <button onClick={() => exportTripHTML(trip)} style={S.btn("rgba(255,255,255,0.25)")}>📄 HTML 저장</button>
-              <button onClick={() => {
-                const blob = new Blob([JSON.stringify(trip, null, 2)], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a"); a.href = url;
-                a.download = trip.title + ".json"; a.click();
-              }} style={S.btn("rgba(255,255,255,0.25)")}>💾 JSON 백업</button>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setShowColorPicker(!showColorPicker)} style={S.hdr()}>🎨</button>
+              <button onClick={() => setShowExport(!showExport)} style={S.hdr()}>↗</button>
             </div>
           </div>
-        )}
 
-        {/* Day tabs */}
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 14, scrollbarWidth: "none" }}>
-          {trip.days.map((day, i) => {
-            const active = activeDay === i;
-            return (
-              <button key={day.id} onClick={() => setActiveDay(i)}
-                style={{
-                  flexShrink: 0, padding: "7px 14px", borderRadius: 20,
-                  border: "2px solid " + (active ? "#fff" : "rgba(255,255,255,0.35)"),
-                  background: active ? "rgba(255,255,255,0.25)" : "transparent",
-                  color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  transition: "all 0.15s",
-                }}>
-                Day {i + 1}
-                {day.date && (
-                  <span style={{ display: "block", fontSize: 10, fontWeight: 400, opacity: 0.85 }}>
-                    {new Date(day.date + "T00:00:00").toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          <button onClick={addDay}
-            style={{
-              flexShrink: 0, padding: "7px 14px", borderRadius: 20,
-              border: "2px dashed rgba(255,255,255,0.4)", background: "transparent",
-              color: "#fff", fontSize: 18, cursor: "pointer",
-            }}>+</button>
+          {showColorPicker && (
+            <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 14, padding: 12, marginBottom: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {TRIP_COLORS.map((c, i) => (
+                <button key={i} onClick={() => { updateTrip({ colorIdx: i }); setShowColorPicker(false); }}
+                  style={{ width: 36, height: 36, borderRadius: "50%", border: trip.colorIdx === i ? "3px solid #fff" : "3px solid transparent", background: c.bg, cursor: "pointer" }} />
+              ))}
+            </div>
+          )}
+
+          {showExport && (
+            <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 14, padding: 14, marginBottom: 12 }}>
+              <p style={{ margin: "0 0 10px", color: "#fff", fontSize: 13, fontWeight: 600 }}>📤 내보내기 / 공유</p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button onClick={copyShareLink} style={S.btn("rgba(255,255,255,0.25)")}>🔗 공유 링크 복사</button>
+                <button onClick={() => exportTripHTML(trip)} style={S.btn("rgba(255,255,255,0.25)")}>📄 HTML 저장</button>
+                <button onClick={() => {
+                  const blob = new Blob([JSON.stringify(trip, null, 2)], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a"); a.href = url;
+                  a.download = trip.title + ".json"; a.click();
+                }} style={S.btn("rgba(255,255,255,0.25)")}>💾 JSON 백업</button>
+              </div>
+            </div>
+          )}
+
+          {/* Day tabs */}
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 14, scrollbarWidth: "none" }}>
+            {trip.days.map((day, i) => {
+              const active = activeDay === i;
+              return (
+                <button key={day.id} onClick={() => setActiveDay(i)}
+                  style={{
+                    flexShrink: 0, padding: "7px 14px", borderRadius: 20,
+                    border: "2px solid " + (active ? "#fff" : "rgba(255,255,255,0.35)"),
+                    background: active ? "rgba(255,255,255,0.25)" : "transparent",
+                    color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}>
+                  Day {i + 1}
+                  {day.date && (
+                    <span style={{ display: "block", fontSize: 10, fontWeight: 400, opacity: 0.85 }}>
+                      {new Date(day.date + "T00:00:00").toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            <button onClick={addDay}
+              style={{
+                flexShrink: 0, padding: "7px 14px", borderRadius: 20,
+                border: "2px dashed rgba(255,255,255,0.4)", background: "transparent",
+                color: "#fff", fontSize: 18, cursor: "pointer",
+              }}>+</button>
+          </div>
         </div>
       </div>
 
-      {/* Day content card */}
-      <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", marginTop: -4, minHeight: "calc(100vh - 260px)" }}>
-        {/* Day header */}
-        <div style={{ padding: "16px 16px 0", borderBottom: "1px solid #f0f0f0" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: cur.color, flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <input type="date" value={cur.date}
-                  onChange={e => updateDay(activeDay, { date: e.target.value })}
-                  style={{ border: "none", outline: "none", fontSize: 13, color: col.accent, fontWeight: 600, background: "transparent" }} />
-                {activeDay === 0 && cur.date && (
-                  <span style={{ fontSize: 10, color: "#bbb" }}>← 설정 시 이후 날짜 자동 업데이트</span>
+      {/* Content area — PC: 2 columns, Mobile: single column */}
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px" }}>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0,1fr)",
+          gap: 20,
+        }}>
+          {/* Day card */}
+          <div style={{ background: "#fff", borderRadius: 20, overflow: "hidden" }}>
+            {/* Day header */}
+            <div style={{ padding: "16px 20px 0", borderBottom: "1px solid #f0f0f0" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: cur.color, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <input type="date" value={cur.date}
+                      onChange={e => updateDay(activeDay, { date: e.target.value })}
+                      style={{ border: "1.5px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 13, color: col.accent, fontWeight: 600, background: "#f8f9ff", padding: "4px 8px" }} />
+                    {activeDay === 0 && cur.date && (
+                      <span style={{ fontSize: 11, color: "#bbb" }}>← 설정 시 이후 날짜 자동 업데이트</span>
+                    )}
+                  </div>
+                  <input value={cur.title} onChange={e => updateDay(activeDay, { title: e.target.value })}
+                    placeholder="이 날의 테마 (예: 도쿄 탐방 🗼)"
+                    style={{ border: "none", outline: "none", fontSize: 16, fontWeight: 600, color: "#2d3748", width: "100%", background: "transparent", marginTop: 6 }} />
+                </div>
+                {trip.days.length > 1 && (
+                  <button onClick={() => removeDay(activeDay)} style={S.ghost({ fontSize: 18 })}>🗑</button>
                 )}
               </div>
-              <input value={cur.title} onChange={e => updateDay(activeDay, { title: e.target.value })}
-                placeholder="이 날의 테마 (예: 도쿄 탐방 🗼)"
-                style={{ border: "none", outline: "none", fontSize: 16, fontWeight: 600, color: "#2d3748", width: "100%", background: "transparent", marginTop: 2 }} />
+              <div style={{ display: "flex" }}>
+                {[["schedule","📅 일정"],["photos","🖼 사진"],["memo","📝 메모"]].map(([key, label]) => (
+                  <button key={key} onClick={() => setActiveTab(key)}
+                    style={{
+                      flex: 1, padding: "10px 0", border: "none", background: "none",
+                      fontSize: 13, fontWeight: 600, cursor: "pointer",
+                      color: activeTab === key ? col.accent : "#bbb",
+                      borderBottom: "2px solid " + (activeTab === key ? col.accent : "transparent"),
+                      transition: "all 0.2s",
+                    }}>{label}</button>
+                ))}
+              </div>
             </div>
-            {trip.days.length > 1 && (
-              <button onClick={() => removeDay(activeDay)} style={S.ghost({ fontSize: 18 })}>🗑</button>
-            )}
+            <div style={{ paddingTop: 16 }}>
+              {activeTab === "schedule" && (
+                <Schedule items={cur.schedule} accent={col.accent}
+                  onChange={v => updateDay(activeDay, { schedule: v })} />
+              )}
+              {activeTab === "photos" && (
+                <PhotoGrid photos={cur.photos || []}
+                  onAdd={p => updateDay(activeDay, { photos: [...(cur.photos || []), p] })}
+                  onDelete={id => updateDay(activeDay, { photos: (cur.photos || []).filter(p => p.id !== id) })} />
+              )}
+              {activeTab === "memo" && (
+                <Memo value={cur.memo} onChange={v => updateDay(activeDay, { memo: v })} />
+              )}
+            </div>
           </div>
-          {/* Sub-tabs */}
-          <div style={{ display: "flex" }}>
-            {[["schedule","📅 일정"],["photos","🖼 사진"],["memo","📝 메모"]].map(([key, label]) => (
-              <button key={key} onClick={() => setActiveTab(key)}
-                style={{
-                  flex: 1, padding: "10px 0", border: "none", background: "none",
-                  fontSize: 13, fontWeight: 600, cursor: "pointer",
-                  color: activeTab === key ? col.accent : "#bbb",
-                  borderBottom: "2px solid " + (activeTab === key ? col.accent : "transparent"),
-                  transition: "all 0.2s",
-                }}>{label}</button>
-            ))}
-          </div>
-        </div>
-        <div style={{ paddingTop: 16 }}>
-          {activeTab === "schedule" && (
-            <Schedule items={cur.schedule} accent={col.accent}
-              onChange={v => updateDay(activeDay, { schedule: v })} />
-          )}
-          {activeTab === "photos" && (
-            <PhotoGrid photos={cur.photos || []}
-              onAdd={p => updateDay(activeDay, { photos: [...(cur.photos || []), p] })}
-              onDelete={id => updateDay(activeDay, { photos: (cur.photos || []).filter(p => p.id !== id) })} />
-          )}
-          {activeTab === "memo" && (
-            <Memo value={cur.memo} onChange={v => updateDay(activeDay, { memo: v })} />
-          )}
         </div>
       </div>
+
+      <style>{`
+        @media (min-width: 768px) {
+          .detail-grid { grid-template-columns: 260px minmax(0,1fr) !important; }
+        }
+      `}</style>
     </div>
   );
 }
 
-// ─── Home (Trip List) ─────────────────────────────────────────────────
 function Home({ trips, onOpen, onAdd, onDelete, sheetUrl, setSheetUrl }) {
   const [showSettings, setShowSettings] = useState(false);
   const [syncStatus, setSyncStatus] = useState("");
-  const [importing, setImporting] = useState(false);
   const importRef = useRef();
 
   const handleSync = async (data) => {
@@ -561,40 +540,37 @@ function Home({ trips, onOpen, onAdd, onDelete, sheetUrl, setSheetUrl }) {
   };
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", fontFamily: "inherit", background: "#f7f8fc" }}>
+    <div style={{ minHeight: "100vh", fontFamily: "inherit", background: "#f7f8fc" }}>
       {/* Header */}
-      <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", padding: "28px 18px 20px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <h1 style={{ margin: 0, color: "#fff", fontSize: 24, fontWeight: 700 }}>✈️ 여행 기록</h1>
-            <p style={{ margin: "4px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 13 }}>
-              {trips.length}개의 여행
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", padding: "28px 24px 24px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <h1 style={{ margin: 0, color: "#fff", fontSize: 26, fontWeight: 700 }}>✈️ 여행 기록</h1>
+              <p style={{ margin: "4px 0 0", color: "rgba(255,255,255,0.75)", fontSize: 13 }}>
+                {trips.length}개의 여행
+              </p>
+            </div>
             <button onClick={() => setShowSettings(!showSettings)} style={S.hdr()}>⚙️</button>
           </div>
-        </div>
 
-        {showSettings && (
-          <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 14, padding: 14, marginTop: 14 }}>
-            <p style={{ margin: "0 0 8px", color: "#fff", fontSize: 13, fontWeight: 600 }}>🔗 Google Sheets 연동</p>
-            <input value={sheetUrl} onChange={e => setSheetUrl(e.target.value)}
-              placeholder="Apps Script 웹앱 URL"
-              style={{ ...S.input(), width: "100%", boxSizing: "border-box", marginBottom: 8 }} />
-            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-              <button onClick={() => handleSync(trips)} style={S.btn("#38a169")}>☁️ 전체 저장</button>
-              <button onClick={() => handleLoad((t) => window._setTrips(t))} style={S.btn("#3182ce")}>📥 불러오기</button>
-            </div>
-            {syncStatus && <p style={{ margin: "0 0 8px", color: "#fff", fontSize: 13 }}>{syncStatus}</p>}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => exportAllJSON(trips)} style={S.btn("#9f7aea")}>💾 전체 JSON 저장</button>
-              <button onClick={() => importRef.current.click()} style={S.btn("#ed8936")}>📂 JSON 가져오기</button>
-              <input ref={importRef} type="file" accept=".json" style={{ display: "none" }} onChange={importJSON} />
-            </div>
-            <details style={{ marginTop: 10 }}>
-              <summary style={{ cursor: "pointer", color: "rgba(255,255,255,0.8)", fontSize: 12 }}>Apps Script 코드 보기</summary>
-              <pre style={{ fontSize: 10, background: "rgba(0,0,0,0.3)", padding: 8, borderRadius: 6, overflowX: "auto", marginTop: 6, color: "#e2e8f0", whiteSpace: "pre-wrap" }}>{`const SS = SpreadsheetApp.getActiveSpreadsheet();
+          {showSettings && (
+            <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 14, padding: 14, marginTop: 14 }}>
+              <p style={{ margin: "0 0 8px", color: "#fff", fontSize: 13, fontWeight: 600 }}>🔗 Google Sheets 연동</p>
+              <input value={sheetUrl} onChange={e => setSheetUrl(e.target.value)}
+                placeholder="Apps Script 웹앱 URL"
+                style={{ ...S.input(), width: "100%", boxSizing: "border-box", marginBottom: 8 }} />
+              <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                <button onClick={() => handleSync(trips)} style={S.btn("#38a169")}>☁️ 전체 저장</button>
+                <button onClick={() => handleLoad((t) => window._setTrips(t))} style={S.btn("#3182ce")}>📥 불러오기</button>
+                <button onClick={() => exportAllJSON(trips)} style={S.btn("#9f7aea")}>💾 JSON 저장</button>
+                <button onClick={() => importRef.current.click()} style={S.btn("#ed8936")}>📂 JSON 가져오기</button>
+                <input ref={importRef} type="file" accept=".json" style={{ display: "none" }} onChange={importJSON} />
+              </div>
+              {syncStatus && <p style={{ margin: "0 0 8px", color: "#fff", fontSize: 13 }}>{syncStatus}</p>}
+              <details>
+                <summary style={{ cursor: "pointer", color: "rgba(255,255,255,0.8)", fontSize: 12 }}>Apps Script 코드 보기</summary>
+                <pre style={{ fontSize: 10, background: "rgba(0,0,0,0.3)", padding: 8, borderRadius: 6, overflowX: "auto", marginTop: 6, color: "#e2e8f0", whiteSpace: "pre-wrap" }}>{`const SS = SpreadsheetApp.getActiveSpreadsheet();
 const SH = SS.getSheetByName("Sheet1") || SS.getActiveSheet();
 function doGet(e){
   const d=SH.getRange("A1").getValue();
@@ -605,30 +581,37 @@ function doPost(e){
   if(b.action==="save") SH.getRange("A1").setValue(b.data);
   return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
 }`}</pre>
-            </details>
-          </div>
-        )}
+              </details>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Trip list */}
-      <div style={{ padding: "16px 16px 100px" }}>
+      {/* Trip grid */}
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px 100px" }}>
         {trips.length === 0
-          ? <div style={{ textAlign: "center", padding: "60px 0", color: "#bbb" }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🌏</div>
-              <p style={{ fontSize: 15, margin: 0 }}>아직 여행 기록이 없어요</p>
-              <p style={{ fontSize: 13, marginTop: 4 }}>아래 + 버튼으로 추가해보세요!</p>
+          ? <div style={{ textAlign: "center", padding: "80px 0", color: "#bbb" }}>
+              <div style={{ fontSize: 56, marginBottom: 16 }}>🌏</div>
+              <p style={{ fontSize: 16, margin: 0 }}>아직 여행 기록이 없어요</p>
+              <p style={{ fontSize: 13, marginTop: 6 }}>아래 + 버튼으로 추가해보세요!</p>
             </div>
-          : trips.map(trip => (
-              <TripCard key={trip.id} trip={trip} onOpen={onOpen} onDelete={onDelete} />
-            ))
+          : <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: 16,
+            }}>
+              {trips.map(trip => (
+                <TripCard key={trip.id} trip={trip} onOpen={onOpen} onDelete={onDelete} />
+              ))}
+            </div>
         }
       </div>
 
       {/* FAB */}
       <button onClick={onAdd}
         style={{
-          position: "fixed", bottom: 28, right: "50%", transform: "translateX(50%)",
-          maxWidth: 56, width: 56, height: 56, borderRadius: "50%",
+          position: "fixed", bottom: 28, right: 28,
+          width: 56, height: 56, borderRadius: "50%",
           background: "linear-gradient(135deg,#667eea,#764ba2)",
           border: "none", color: "#fff", fontSize: 28, cursor: "pointer",
           boxShadow: "0 6px 24px rgba(102,126,234,0.5)",
@@ -639,17 +622,14 @@ function doPost(e){
   );
 }
 
-// ─── Root App ─────────────────────────────────────────────────────────
 export default function App() {
   const [trips, setTrips] = useState([]);
   const [openTripId, setOpenTripId] = useState(null);
   const [sheetUrl, setSheetUrl] = useState("");
 
-  // Expose to window for settings panel callbacks
   window._setTrips = setTrips;
   window._importTrips = (t) => setTrips(t);
 
-  // localStorage persistence
   useEffect(() => {
     try {
       const s = localStorage.getItem(STORAGE_KEY);
@@ -667,7 +647,6 @@ export default function App() {
     try { if (sheetUrl) localStorage.setItem(SHEET_URL_KEY, sheetUrl); } catch {}
   }, [sheetUrl]);
 
-  // Shared plan from URL
   useEffect(() => {
     try {
       const p = new URLSearchParams(location.search).get("share");
@@ -704,23 +683,11 @@ export default function App() {
   const openTrip = trips.find(t => t.id === openTripId);
 
   if (openTrip) {
-    return (
-      <TripDetail
-        trip={openTrip}
-        onUpdate={updateTrip}
-        onBack={() => setOpenTripId(null)}
-      />
-    );
+    return <TripDetail trip={openTrip} onUpdate={updateTrip} onBack={() => setOpenTripId(null)} />;
   }
 
   return (
-    <Home
-      trips={trips}
-      onOpen={setOpenTripId}
-      onAdd={addTrip}
-      onDelete={deleteTrip}
-      sheetUrl={sheetUrl}
-      setSheetUrl={setSheetUrl}
-    />
+    <Home trips={trips} onOpen={setOpenTripId} onAdd={addTrip} onDelete={deleteTrip}
+      sheetUrl={sheetUrl} setSheetUrl={setSheetUrl} />
   );
 }

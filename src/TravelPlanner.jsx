@@ -16,6 +16,9 @@ const DEVICE_ID = (() => {
   return id;
 })();
 
+// 마지막 저장 시각 (자동 동기화 충돌 방지용)
+let lastSavedAt = localStorage.getItem("tp_saved_at") || "";
+
 // ────────────────────────────────────────────────────────────
 // 상수
 // ────────────────────────────────────────────────────────────
@@ -64,10 +67,13 @@ const fmts = s => s ? new Date(s+"T12:00:00").toLocaleDateString("ko-KR",{year:"
 async function dbSave(trips) {
   if (!supabase) return { ok:false, msg:"Supabase 미설정" };
   try {
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from("travel_data")
-      .upsert({ id: DEVICE_ID, trips: JSON.stringify(trips), updated_at: new Date().toISOString() });
+      .upsert({ id: DEVICE_ID, trips: JSON.stringify(trips), updated_at: now });
     if (error) throw error;
+    lastSavedAt = now;
+    localStorage.setItem("tp_saved_at", now);
     return { ok:true, msg:"✅ 저장 완료!" };
   } catch(e) {
     return { ok:false, msg:"❌ " + e.message };
@@ -75,17 +81,17 @@ async function dbSave(trips) {
 }
 
 async function dbLoad() {
-  if (!supabase) return { ok:false, msg:"Supabase 미설정", data:null };
+  if (!supabase) return { ok:false, msg:"Supabase 미설정", data:null, serverAt:null };
   try {
     const { data, error } = await supabase
       .from("travel_data")
-      .select("trips")
+      .select("trips, updated_at")
       .eq("id", DEVICE_ID);
     if (error) throw error;
-    if (!data || data.length === 0) return { ok:false, msg:"❌ 저장된 데이터가 없어요. 먼저 저장해주세요.", data:null };
-    return { ok:true, msg:"✅ 불러오기 완료!", data: JSON.parse(data[0].trips) };
+    if (!data || data.length === 0) return { ok:false, msg:"저장된 데이터 없음", data:null, serverAt:null };
+    return { ok:true, msg:"✅ 동기화 완료!", data: JSON.parse(data[0].trips), serverAt: data[0].updated_at };
   } catch(e) {
-    return { ok:false, msg:"❌ " + e.message, data:null };
+    return { ok:false, msg:"❌ " + e.message, data:null, serverAt:null };
   }
 }
 
@@ -383,12 +389,13 @@ function TripCard({ trip, onOpen, onDel }) {
 // ────────────────────────────────────────────────────────────
 // Home
 // ────────────────────────────────────────────────────────────
-function Home({ trips, setTrips, onOpen }) {
+function Home({ trips, setTrips, onOpen, syncMsg }) {
   const [showSettings,setShowSettings]=useState(false);
-  const [syncMsg,setSyncMsg]=useState("");
+  const [localMsg,setLocalMsg]=useState("");
   const [syncing,setSyncing]=useState(false);
   const importRef=useRef();
-  const toast=m=>{setSyncMsg(m);setTimeout(()=>setSyncMsg(""),4000);};
+  const toast=m=>{setLocalMsg(m);setTimeout(()=>setLocalMsg(""),4000);};
+  const displayMsg = localMsg || syncMsg;
 
   const handleSave=async()=>{
     setSyncing(true); toast("저장 중...");
@@ -438,7 +445,7 @@ function Home({ trips, setTrips, onOpen }) {
                 <button onClick={()=>importRef.current.click()} style={S.btn("#ed8936")}>📂 JSON 가져오기</button>
                 <input ref={importRef} type="file" accept=".json" style={{display:"none"}} onChange={importJSON} />
               </div>
-              {syncMsg&&<p style={{margin:0,color:"#fff",fontSize:13}}>{syncMsg}</p>}
+              {displayMsg&&<p style={{margin:0,color:"#fff",fontSize:13}}>{displayMsg}</p>}
             </div>
           )}
         </div>
@@ -467,15 +474,58 @@ function Home({ trips, setTrips, onOpen }) {
 // App
 // ────────────────────────────────────────────────────────────
 export default function App() {
-  const [trips,setTrips]=useState([]);
-  const [openId,setOpenId]=useState(null);
+  const [trips,    setTrips]    = useState([]);
+  const [openId,   setOpenId]   = useState(null);
+  const [syncMsg,  setSyncMsg]  = useState("");
+  const saveTimer  = useRef(null);
+  const isEditing  = useRef(false);
 
+  const toast = (m) => { setSyncMsg(m); setTimeout(()=>setSyncMsg(""), 3000); };
+
+  // 최초 로드: localStorage → 그 다음 서버 체크
   useEffect(()=>{
-    try{const s=localStorage.getItem(LS_TRIPS);if(s)setTrips(JSON.parse(s));}catch{}
+    try { const s=localStorage.getItem(LS_TRIPS); if(s) setTrips(JSON.parse(s)); } catch {}
+    // 앱 시작 시 서버 데이터와 비교
+    autoSync(true);
   },[]);
+
+  // trips 변경 시 localStorage 저장 + 2초 뒤 자동 서버 저장
   useEffect(()=>{
-    try{localStorage.setItem(LS_TRIPS,JSON.stringify(trips));}catch{}
+    try { localStorage.setItem(LS_TRIPS, JSON.stringify(trips)); } catch {}
+    if (!isEditing.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async ()=>{
+      const r = await dbSave(trips);
+      if (r.ok) toast("☁️ 자동 저장됨");
+    }, 2000);
   },[trips]);
+
+  // 30초마다 서버 최신 데이터 체크
+  useEffect(()=>{
+    const interval = setInterval(()=> autoSync(false), 30000);
+    return () => clearInterval(interval);
+  },[trips]);
+
+  // 자동 동기화: 서버가 더 최신이면 불러오기
+  const autoSync = async (isFirst) => {
+    const r = await dbLoad();
+    if (!r.ok || !r.data) return;
+    // 서버 updated_at vs 로컬 lastSavedAt 비교
+    if (!lastSavedAt || new Date(r.serverAt) > new Date(lastSavedAt)) {
+      setTrips(r.data);
+      lastSavedAt = r.serverAt;
+      localStorage.setItem("tp_saved_at", r.serverAt);
+      if (!isFirst) toast("🔄 최신 데이터로 업데이트됨");
+    }
+  };
+
+  // trips 변경 시 편집 중으로 표시
+  const setTripsWithEdit = (val) => {
+    isEditing.current = true;
+    setTrips(val);
+  };
+
+  // 공유 링크
   useEffect(()=>{
     try{
       const p=new URLSearchParams(location.search).get("share");
@@ -489,6 +539,6 @@ export default function App() {
   },[]);
 
   if(openId&&trips.find(t=>t.id===openId))
-    return <TripDetail tripId={openId} trips={trips} setTrips={setTrips} onBack={()=>setOpenId(null)} />;
-  return <Home trips={trips} setTrips={setTrips} onOpen={setOpenId} />;
+    return <TripDetail tripId={openId} trips={trips} setTrips={setTripsWithEdit} onBack={()=>setOpenId(null)} syncMsg={syncMsg} />;
+  return <Home trips={trips} setTrips={setTripsWithEdit} onOpen={setOpenId} syncMsg={syncMsg} />;
 }

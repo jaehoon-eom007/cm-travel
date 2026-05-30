@@ -80,10 +80,10 @@ async function dbLoad() {
     const { data, error } = await supabase
       .from("travel_data")
       .select("trips")
-      .eq("id", DEVICE_ID)
-      .single();
+      .eq("id", DEVICE_ID);
     if (error) throw error;
-    return { ok:true, msg:"✅ 불러오기 완료!", data: JSON.parse(data.trips) };
+    if (!data || data.length === 0) return { ok:false, msg:"❌ 저장된 데이터가 없어요. 먼저 저장해주세요.", data:null };
+    return { ok:true, msg:"✅ 불러오기 완료!", data: JSON.parse(data[0].trips) };
   } catch(e) {
     return { ok:false, msg:"❌ " + e.message, data:null };
   }

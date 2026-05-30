@@ -199,77 +199,72 @@ function Memo({ value, onChange }) {
 }
 
 function ScheduleItem({ item, idx, total, accent, onChange, onDelete, onMove }) {
-  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(item.text);
+  const [editTime, setEditTime] = useState(item.time);
+
+  const saveEdit = () => {
+    if (!editText.trim()) return;
+    onChange({ ...item, text: editText.trim(), time: editTime });
+    setEditing(false);
+  };
+
   return (
     <div style={{
       background: item.done ? "#f0fff4" : "#fff",
       border: "1px solid " + (item.done ? "#9ae6b4" : "#e2e8f0"),
-      borderRadius: 12, overflow: "hidden",
-      transition: "all 0.2s",
+      borderRadius: 12, overflow: "hidden", transition: "all 0.2s",
     }}>
-      {/* Main row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px" }}>
-        {/* 순서 버튼 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
-          <button onClick={() => onMove(idx, -1)} disabled={idx === 0}
-            style={{
-              width: 20, height: 18, border: "none", borderRadius: 4, cursor: idx === 0 ? "default" : "pointer",
-              background: idx === 0 ? "#f0f0f0" : "#e8eaf6", color: idx === 0 ? "#ccc" : "#667eea",
-              fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
-            }}>▲</button>
-          <button onClick={() => onMove(idx, 1)} disabled={idx === total - 1}
-            style={{
-              width: 20, height: 18, border: "none", borderRadius: 4, cursor: idx === total - 1 ? "default" : "pointer",
-              background: idx === total - 1 ? "#f0f0f0" : "#e8eaf6", color: idx === total - 1 ? "#ccc" : "#667eea",
-              fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
-            }}>▼</button>
+      {editing ? (
+        <div style={{ padding: "10px 12px" }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+            <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)}
+              style={S.input({ width: 100, flexShrink: 0, fontSize: 13 })} />
+            <input value={editText} onChange={e => setEditText(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && saveEdit()}
+              autoFocus style={S.input({ flex: 1, fontSize: 13 })} />
+          </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button onClick={() => { setEditing(false); setEditText(item.text); setEditTime(item.time); }}
+              style={{ padding: "5px 14px", border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", fontSize: 12, cursor: "pointer", color: "#888" }}>
+              취소
+            </button>
+            <button onClick={saveEdit}
+              style={{ padding: "5px 14px", border: "none", borderRadius: 8, background: accent || "#667eea", color: "#fff", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+              저장
+            </button>
+          </div>
         </div>
-        {/* 체크 */}
-        <button onClick={() => onChange({ ...item, done: !item.done })}
-          style={{
-            width: 22, height: 22, borderRadius: "50%", border: "2px solid",
-            borderColor: item.done ? "#38a169" : "#cbd5e0",
-            background: item.done ? "#38a169" : "transparent",
-            cursor: "pointer", flexShrink: 0, color: "#fff", fontSize: 11,
-          }}>{item.done ? "✓" : ""}</button>
-        {/* 시간 */}
-        {item.time && <span style={{ fontSize: 12, color: accent || "#667eea", fontWeight: 600, minWidth: 42, flexShrink: 0 }}>{item.time}</span>}
-        {/* 텍스트 */}
-        <span onClick={() => setOpen(!open)} style={{
-          flex: 1, fontSize: 14, color: "#2d3748",
-          textDecoration: item.done ? "line-through" : "none",
-          opacity: item.done ? 0.5 : 1, cursor: "pointer",
-        }}>{item.text}</span>
-        {/* 메모 토글 */}
-        <button onClick={() => setOpen(!open)}
-          style={{
-            background: open ? (accent || "#667eea") : "#f0f4ff",
-            border: "none", borderRadius: 8, padding: "3px 8px",
-            fontSize: 11, color: open ? "#fff" : (accent || "#667eea"),
-            cursor: "pointer", flexShrink: 0, fontWeight: 600,
-          }}>
-          {open ? "접기" : (item.memo ? "📝" : "메모")}
-        </button>
-        {/* 삭제 */}
-        <button onClick={onDelete} style={S.ghost()}>✕</button>
-      </div>
-      {/* 메모 영역 */}
-      {open && (
-        <div style={{ padding: "0 12px 12px", borderTop: "1px solid #f0f0f0" }}>
-          <textarea
-            value={item.memo || ""}
-            onChange={e => onChange({ ...item, memo: e.target.value })}
-            placeholder="이 일정에 대한 메모를 입력하세요..."
-            autoFocus
-            style={{
-              width: "100%", minHeight: 80, border: "1.5px solid #e2e8f0",
-              borderRadius: 8, padding: "8px 10px", fontSize: 13, lineHeight: 1.7,
-              resize: "vertical", outline: "none", boxSizing: "border-box",
-              fontFamily: "inherit", color: "#2d3748", background: "#fafafa", marginTop: 8,
-            }}
-          />
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
+            <button onClick={() => onMove(idx, -1)} disabled={idx === 0}
+              style={{ width: 20, height: 18, border: "none", borderRadius: 4, cursor: idx === 0 ? "default" : "pointer", background: idx === 0 ? "#f0f0f0" : "#e8eaf6", color: idx === 0 ? "#ccc" : "#667eea", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>▲</button>
+            <button onClick={() => onMove(idx, 1)} disabled={idx === total - 1}
+              style={{ width: 20, height: 18, border: "none", borderRadius: 4, cursor: idx === total - 1 ? "default" : "pointer", background: idx === total - 1 ? "#f0f0f0" : "#e8eaf6", color: idx === total - 1 ? "#ccc" : "#667eea", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>▼</button>
+          </div>
+          <button onClick={() => onChange({ ...item, done: !item.done })}
+            style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid", borderColor: item.done ? "#38a169" : "#cbd5e0", background: item.done ? "#38a169" : "transparent", cursor: "pointer", flexShrink: 0, color: "#fff", fontSize: 11 }}>{item.done ? "✓" : ""}</button>
+          {item.time && (
+            <span style={{ fontSize: 12, color: accent || "#667eea", fontWeight: 600, minWidth: 42, flexShrink: 0 }}>{item.time}</span>
+          )}
+          <span style={{ flex: 1, fontSize: 14, color: "#2d3748", textDecoration: item.done ? "line-through" : "none", opacity: item.done ? 0.5 : 1 }}>{item.text}</span>
+          <button onClick={() => { setEditing(true); setEditText(item.text); setEditTime(item.time); }}
+            style={{ background: "#f0f4ff", border: "none", borderRadius: 8, padding: "3px 8px", fontSize: 11, color: accent || "#667eea", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}>✏️</button>
+          <button onClick={onDelete} style={S.ghost()}>✕</button>
         </div>
       )}
+      <div style={{ padding: "0 12px 10px", borderTop: "1px solid #f5f5f5" }}>
+        <textarea
+          value={item.memo || ""}
+          onChange={e => onChange({ ...item, memo: e.target.value })}
+          placeholder="메모 입력..."
+          rows={item.memo ? 3 : 1}
+          style={{ width: "100%", border: "none", padding: "6px 4px", fontSize: 12, lineHeight: 1.7, resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "inherit", color: "#666", background: "transparent" }}
+          onFocus={e => { e.target.rows = 3; e.target.style.background = "#fafafa"; e.target.style.border = "1.5px solid #e2e8f0"; e.target.style.borderRadius = "8px"; e.target.style.padding = "8px 10px"; }}
+          onBlur={e => { e.target.rows = item.memo ? 3 : 1; e.target.style.background = "transparent"; e.target.style.border = "none"; e.target.style.padding = "6px 4px"; }}
+        />
+      </div>
     </div>
   );
 }

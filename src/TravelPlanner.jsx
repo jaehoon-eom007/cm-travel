@@ -371,7 +371,7 @@ function TripDetail({ trip, onUpdate, onBack }) {
   const updateDay = useCallback((idx, patch) => {
     const nd = [...trip.days];
     nd[idx] = { ...nd[idx], ...patch };
-    if ("date" in patch && idx === 0 && nd[0].date) {
+    if ("date" in patch && nd[0].date) {
       for (let i = 1; i < nd.length; i++) {
         nd[i] = { ...nd[i], date: addDays(nd[0].date, i) };
       }
@@ -380,12 +380,17 @@ function TripDetail({ trip, onUpdate, onBack }) {
   }, [trip, onUpdate]);
 
   const addDay = () => {
-    const last = trip.days[trip.days.length - 1];
-    const nextDate = last.date ? addDays(last.date, 1) : "";
-    const nd = [...trip.days, { ...newDay(trip.days.length), date: nextDate }];
+    const firstDate = trip.days[0]?.date;
+    const newIdx = trip.days.length;
+    const nextDate = firstDate ? addDays(firstDate, newIdx) : "";
+    const nd = [...trip.days, { ...newDay(newIdx), date: nextDate }];
+    onUpdate({ ...trip, days: nd });
     onUpdate({ ...trip, days: nd });
     setActiveDay(nd.length - 1);
+    setActiveDay(nd.length - 1);
   };
+  };
+
 
   const removeDay = (idx) => {
     if (trip.days.length === 1) return;

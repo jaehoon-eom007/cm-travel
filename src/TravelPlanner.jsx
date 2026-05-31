@@ -8,12 +8,8 @@ const supabase = SUPABASE_URL && SUPABASE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_KEY)
   : null;
 
-// 기기 고유 ID (같은 기기끼리 공유)
-const DEVICE_ID = (() => {
-  let id = localStorage.getItem("tp_device");
-  if (!id) { id = "dev_" + Date.now().toString(36); localStorage.setItem("tp_device", id); }
-  return id;
-})();
+// 모든 기기가 같은 ID 사용 → 어느 기기에서든 같은 데이터 공유
+const DEVICE_ID = "shared";
 
 // ─── 상수 ────────────────────────────────────────────────────
 const LS_TRIPS = "tp6_trips";

@@ -130,9 +130,51 @@ function MemoPanel({ memo, onChange, ac, tabs, collapsible=false, defaultOpen=tr
   );
 }
 
+// ─── PhotoViewer (전체화면 뷰어) ─────────────────────────────
+function PhotoViewer({ photos, startIdx, onClose }) {
+  const [idx, setIdx] = useState(startIdx);
+  useEffect(() => {
+    const h = e => {
+      if (e.key === "ArrowRight") setIdx(i => Math.min(i+1, photos.length-1));
+      if (e.key === "ArrowLeft")  setIdx(i => Math.max(i-1, 0));
+      if (e.key === "Escape")     onClose();
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [photos.length, onClose]);
+
+  return (
+    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.92)", zIndex:1000, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+      {/* 닫기 */}
+      <button onClick={onClose} style={{ position:"absolute", top:16, right:16, background:"rgba(255,255,255,0.15)", border:"none", borderRadius:"50%", width:40, height:40, color:"#fff", fontSize:20, cursor:"pointer" }}>✕</button>
+
+      {/* 사진 */}
+      <img src={photos[idx].src} alt={photos[idx].name}
+        onClick={e => e.stopPropagation()}
+        style={{ maxWidth:"92vw", maxHeight:"78vh", objectFit:"contain", borderRadius:10 }} />
+
+      {/* 이름 */}
+      <p style={{ color:"rgba(255,255,255,0.6)", fontSize:13, marginTop:12 }}>{photos[idx].name}</p>
+
+      {/* 이전/다음 버튼 */}
+      <div style={{ display:"flex", gap:16, marginTop:8 }}>
+        <button onClick={e => { e.stopPropagation(); setIdx(i => Math.max(i-1,0)); }}
+          disabled={idx===0}
+          style={{ padding:"8px 20px", border:"none", borderRadius:20, background:idx===0?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.25)", color:"#fff", fontSize:14, cursor:idx===0?"default":"pointer" }}>◀ 이전</button>
+        <span style={{ color:"rgba(255,255,255,0.5)", fontSize:13, lineHeight:"36px" }}>{idx+1} / {photos.length}</span>
+        <button onClick={e => { e.stopPropagation(); setIdx(i => Math.min(i+1, photos.length-1)); }}
+          disabled={idx===photos.length-1}
+          style={{ padding:"8px 20px", border:"none", borderRadius:20, background:idx===photos.length-1?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.25)", color:"#fff", fontSize:14, cursor:idx===photos.length-1?"default":"pointer" }}>다음 ▶</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── PhotoGrid ───────────────────────────────────────────────
 function PhotoGrid({ photos, onAdd, onDel }) {
   const ref = useRef();
+  const [viewIdx, setViewIdx] = useState(null);
+
   const read = files => Array.from(files).forEach(f => {
     if (!f.type.startsWith("image/")) return;
     const r = new FileReader();
@@ -151,6 +193,7 @@ function PhotoGrid({ photos, onAdd, onDel }) {
     window.addEventListener("paste", h);
     return () => window.removeEventListener("paste", h);
   }, [onAdd]);
+
   return (
     <div style={{ padding:"0 16px 16px" }}>
       <div style={{ display:"flex", gap:8, marginBottom:12 }}>
@@ -161,14 +204,20 @@ function PhotoGrid({ photos, onAdd, onDel }) {
       {photos.length === 0
         ? <p style={{ textAlign:"center", color:"#ccc", padding:"24px 0", fontSize:13 }}>사진을 추가해보세요 📷</p>
         : <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))", gap:6 }}>
-            {photos.map(p => (
-              <div key={p.id} style={{ position:"relative", aspectRatio:"1", borderRadius:10, overflow:"hidden" }}>
-                <img src={p.src} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                <button onClick={() => onDel(p.id)} style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", border:"none", borderRadius:"50%", width:22, height:22, color:"#fff", cursor:"pointer", fontSize:11 }}>✕</button>
+            {photos.map((p,i) => (
+              <div key={p.id} style={{ position:"relative", aspectRatio:"1", borderRadius:10, overflow:"hidden", cursor:"pointer" }}>
+                <img src={p.src} alt={p.name}
+                  onClick={() => setViewIdx(i)}
+                  style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                <button onClick={e => { e.stopPropagation(); onDel(p.id); }}
+                  style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.5)", border:"none", borderRadius:"50%", width:22, height:22, color:"#fff", cursor:"pointer", fontSize:11 }}>✕</button>
               </div>
             ))}
           </div>
       }
+      {viewIdx !== null && (
+        <PhotoViewer photos={photos} startIdx={viewIdx} onClose={() => setViewIdx(null)} />
+      )}
     </div>
   );
 }
@@ -252,15 +301,13 @@ function Schedule({ items, ac, onChange }) {
             ))}
           </div>
       }
-      {/* 입력창 (아래) */}
-      <div style={{ borderTop:"1.5px solid #f0f0f0", paddingTop:12 }}>
+      {/* 입력창 (아래) - 한 줄 */}
+      <div style={{ display:"flex", gap:6, alignItems:"center", borderTop:"1.5px solid #f0f0f0", paddingTop:12 }}>
         <input type="time" value={time} onChange={e => setTime(e.target.value)}
-          style={{ ...S.input(), width:"100%", marginBottom:8, boxSizing:"border-box" }} />
-        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key==="Enter"&&add()}
-            placeholder="일정 추가..." style={S.input({flex:1})} />
-          <button onClick={add} style={S.circ(ac||"#667eea")}>+</button>
-        </div>
+          style={{ ...S.input(), width:88, flexShrink:0, fontSize:13, padding:"9px 6px" }} />
+        <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key==="Enter"&&add()}
+          placeholder="일정 추가..." style={S.input({flex:1, minWidth:0})} />
+        <button onClick={add} style={S.circ(ac||"#667eea")}>+</button>
       </div>
     </div>
   );

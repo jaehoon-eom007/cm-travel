@@ -44,7 +44,7 @@ function makeDay(idx, date="") {
   return { id:uid(), date, title:"", schedule:[], photos:[], memo:"", color:DAY_COLORS[idx % DAY_COLORS.length] };
 }
 function makeTrip(colorIdx=0) {
-  return { id:uid(), title:"새 여행", emoji:EMOJIS[Math.floor(Math.random()*EMOJIS.length)], colorIdx, days:[makeDay(0)], createdAt:new Date().toISOString() };
+  return { id:uid(), title:"새 여행", emoji:EMOJIS[Math.floor(Math.random()*EMOJIS.length)], colorIdx, days:[makeDay(0)], memo:"", createdAt:new Date().toISOString() };
 }
 const fmt  = s => s ? new Date(s+"T12:00:00").toLocaleDateString("ko-KR",{month:"long",day:"numeric",weekday:"short"}) : "";
 const fmts = s => s ? new Date(s+"T12:00:00").toLocaleDateString("ko-KR",{year:"numeric",month:"short",day:"numeric"}) : "";
@@ -216,14 +216,10 @@ function Schedule({ items, ac, onChange }) {
   };
   return (
     <div style={{padding:"0 16px 16px"}}>
-      <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center"}}>
-        <input type="time" value={time} onChange={e=>setTime(e.target.value)} style={S.input({width:100,flexShrink:0})} />
-        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()} placeholder="일정 추가..." style={S.input({flex:1})} />
-        <button onClick={add} style={S.circ(ac||"#667eea")}>+</button>
-      </div>
+      {/* 일정 목록 */}
       {items.length === 0
-        ? <p style={{textAlign:"center",color:"#ccc",padding:"24px 0",fontSize:13}}>일정을 추가해보세요 🗓</p>
-        : <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        ? <p style={{textAlign:"center",color:"#ccc",padding:"24px 0",fontSize:13}}>아래에서 일정을 추가해보세요 🗓</p>
+        : <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
             {items.map((it,i) => (
               <ScheduleItem key={it.id} item={it} idx={i} total={items.length} ac={ac}
                 onChange={u => onChange(items.map(x => x.id===it.id ? u : x))}
@@ -232,6 +228,12 @@ function Schedule({ items, ac, onChange }) {
             ))}
           </div>
       }
+      {/* 입력창 - 하단 */}
+      <div style={{display:"flex",gap:8,alignItems:"center",borderTop:"1.5px solid #f0f0f0",paddingTop:12}}>
+        <input type="time" value={time} onChange={e=>setTime(e.target.value)} style={S.input({width:100,flexShrink:0})} />
+        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()} placeholder="일정 추가..." style={S.input({flex:1})} />
+        <button onClick={add} style={S.circ(ac||"#667eea")}>+</button>
+      </div>
     </div>
   );
 }
@@ -358,6 +360,28 @@ function TripDetail({ tripId, trips, setTrips, onBack }) {
       </div>
 
       <div style={{maxWidth:760,margin:"0 auto",padding:"24px 16px 100px"}}>
+        {/* 여행 전체 메모 */}
+        <div style={{marginBottom:28}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+            <div style={{flexShrink:0,background:col.ac,borderRadius:14,padding:"6px 14px",textAlign:"center"}}>
+              <div style={{color:"rgba(255,255,255,0.8)",fontSize:10,fontWeight:600}}>전체</div>
+              <div style={{color:"#fff",fontSize:16,fontWeight:700,lineHeight:1}}>📝</div>
+            </div>
+            <div>
+              <div style={{fontSize:15,fontWeight:700,color:"#2d3748"}}>여행 전체 메모</div>
+              <div style={{fontSize:12,color:"#aaa"}}>여행 전반에 대한 메모를 남겨보세요</div>
+            </div>
+          </div>
+          <div style={{background:"#fff",borderRadius:16,overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,0.06)",padding:"12px 16px"}}>
+            <textarea
+              value={trip.memo||""}
+              onChange={e=>upTrip({memo:e.target.value})}
+              placeholder="예산, 준비물, 주의사항, 숙소 정보 등 여행 전체에 대한 메모를 입력하세요..."
+              style={{width:"100%",minHeight:100,border:"none",outline:"none",fontSize:14,lineHeight:1.8,resize:"vertical",boxSizing:"border-box",fontFamily:"inherit",color:"#2d3748",background:"transparent"}}
+            />
+          </div>
+        </div>
+
         {trip.days.map((day,i) => (
           <DaySection key={day.id} day={day} dayIdx={i} ac={col.ac}
             onUpdate={upDay} onRemove={removeDay} showRemove={trip.days.length>1} />

@@ -195,7 +195,7 @@ function ScheduleItem({ item, idx, total, ac, onChange, onDel, onMove }) {
           </div>
         </div>
       ) : (
-        <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 10px" }}>
           <div style={{ display:"flex", flexDirection:"column", gap:2, flexShrink:0 }}>
             <button onClick={() => onMove(idx,-1)} disabled={idx===0}
               style={{ width:20,height:18,border:"none",borderRadius:4,cursor:idx===0?"default":"pointer",background:idx===0?"#f0f0f0":"#e8eaf6",color:idx===0?"#ccc":ac,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",padding:0 }}>▲</button>
@@ -212,7 +212,7 @@ function ScheduleItem({ item, idx, total, ac, onChange, onDel, onMove }) {
         </div>
       )}
       {/* 일정 메모 */}
-      <div style={{ borderTop:"1px solid #f5f5f5", padding:"2px 12px 8px" }}>
+      <div style={{ borderTop:"1px solid #f5f5f5", padding:"1px 10px 6px" }}>
         <textarea value={item.memo||""} onChange={e => onChange({...item,memo:e.target.value})}
           placeholder="메모 입력..." rows={item.memo ? 3 : 1}
           style={{ width:"100%", border:"none", padding:"6px 4px", fontSize:12, lineHeight:1.7, resize:"none", outline:"none", boxSizing:"border-box", fontFamily:"inherit", color:"#666", background:"transparent" }}
@@ -253,10 +253,14 @@ function Schedule({ items, ac, onChange }) {
           </div>
       }
       {/* 입력창 (아래) */}
-      <div style={{ display:"flex", gap:8, alignItems:"center", borderTop:"1.5px solid #f0f0f0", paddingTop:12 }}>
-        <input type="time" value={time} onChange={e => setTime(e.target.value)} style={S.input({width:100,flexShrink:0})} />
-        <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key==="Enter"&&add()} placeholder="일정 추가..." style={S.input({flex:1})} />
-        <button onClick={add} style={S.circ(ac||"#667eea")}>+</button>
+      <div style={{ borderTop:"1.5px solid #f0f0f0", paddingTop:12 }}>
+        <input type="time" value={time} onChange={e => setTime(e.target.value)}
+          style={{ ...S.input(), width:"100%", marginBottom:8, boxSizing:"border-box" }} />
+        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key==="Enter"&&add()}
+            placeholder="일정 추가..." style={S.input({flex:1})} />
+          <button onClick={add} style={S.circ(ac||"#667eea")}>+</button>
+        </div>
       </div>
     </div>
   );

@@ -517,24 +517,24 @@ export default function App() {
 
   // ── 최초 로드 ──
   useEffect(() => {
-    // 1) 로컬 데이터 먼저 보여주기
+    // 1) 로컬 데이터 먼저 보여주기 (빠른 렌더링용)
     try {
       const s = localStorage.getItem(LS_TRIPS);
       if (s) setTrips(JSON.parse(s));
     } catch {}
 
-    // 2) 서버에서 최신 데이터 가져오기
+    // 2) 서버가 연결됐으면 무조건 서버 데이터 우선
     if (!supabase) return;
     dbLoad().then(r => {
-      if (!r.ok || !r.data) return;
-      const localAt  = savedAtRef.current;
-      const serverAt = r.serverAt;
-      // 서버가 더 최신이면 덮어쓰기
-      if (!localAt || new Date(serverAt) > new Date(localAt)) {
-        setTrips(r.data);
-        savedAtRef.current = serverAt;
-        localStorage.setItem("tp_saved_at", serverAt);
-      }
+      console.log("[Sync] dbLoad result:", r);
+      if (!r.ok) { console.error("[Sync] load failed"); return; }
+      if (!r.data) { console.log("[Sync] no server data yet"); return; }
+      // 서버 데이터가 있으면 무조건 적용 (로컬보다 서버 우선)
+      console.log("[Sync] applying server data, serverAt:", r.serverAt);
+      setTrips(r.data);
+      savedAtRef.current = r.serverAt;
+      localStorage.setItem("tp_saved_at", r.serverAt);
+      localStorage.setItem(LS_TRIPS, JSON.stringify(r.data));
     });
   }, []);
 
